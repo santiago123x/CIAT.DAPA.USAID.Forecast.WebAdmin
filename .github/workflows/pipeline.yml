@@ -1,0 +1,166 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Devops AClimate System WebAdmin
+
+on:
+  push:
+    branches: [ "stage" ]
+    tags:
+    - 'v*'
+
+
+permissions:
+  contents: read
+
+jobs:
+
+# ------- START API PROCCESS -------- #
+
+  CI_WebAdmin:
+
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_NAME: CIAT.DAPA.USAID.Forecast.WebAdmin
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 2.2.X
+
+    - name: Create Output Directory WebAdmin
+      run: mkdir -p ./publish/WebAdmin
+    - name: Create Output test Directory WebAdmin
+      run: mkdir -p ./TestResults/WebAdmin
+    - name: Remove Previous Publish Folder
+      run: rm -rf ./publish/WebAdmin/*
+    - name: Remove Previous TestResults Folder
+      run: rm -rf ./TestResults/WebAdmin/*
+
+    - name: Copy dependencies from other repo
+      run: |
+        folder_before="$GITHUB_WORKSPACE/.."
+        git clone ${{ vars.DATA_URL }} $folder_before/CIAT.DAPA.USAID.Forecast.Data
+
+    - name: Restore NuGet Packages
+      run: dotnet restore $PROJECT_NAME.csproj
+
+    - name: Build WebAdmin
+      run: dotnet build $PROJECT_NAME.csproj --configuration Release
+
+    - name: Test WebAdmin
+      run: dotnet test $PROJECT_NAME.csproj --configuration Release --logger trx --results-directory TestResults/WebAdmin
+
+
+
+# ------- END API PROCCESS -------- #    
+
+
+# ------- START MERGE PROCCESS -------- #
+
+  MergeMasterApi:
+    needs: CI_WebAdmin
+    name: Merge Pre deploy with Main
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Merge pre_deploy -> main
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          head_to_merge: ${{ github.ref }}
+          target_branch: main
+          github_token: ${{ github.token }}
+
+# ------- END MERGE PROCCESS -------- #
+
+# ------- START RELEASE PROCCESS -------- #
+
+  PostRelease:
+    needs: MergeMasterApi
+    name: Create Release
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: CIAT.DAPA.USAID.Forecast.WebAdmin
+    permissions: write-all
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+    - uses: actions/setup-node@v3
+      with:
+          node-version: 18
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 2.2.X
+
+    #Publish WebAdmin
+    - name: Copy dependencies from other repo
+      run: |
+        folder_before="$GITHUB_WORKSPACE/.."
+        git clone ${{ vars.DATA_URL }} $folder_before/CIAT.DAPA.USAID.Forecast.Data
+    - name: Restore NuGet Packages
+      run: dotnet restore $PROJECT_NAME.csproj
+    - name: Publish WebAdmin
+      run: dotnet publish $PROJECT_NAME.csproj --configuration Release -o ./publish/WebAdmin --no-restore
+
+    # API Zip
+    - name: Zip artifact for deployment
+      run: zip releaseWebAdmin.zip ./publish/WebAdmin/ -r
+
+
+    # Upload Artifacts
+    - name: Upload WebAdmin artifact for deployment job
+      uses: actions/upload-artifact@v3
+      with:
+        name: WebAdmin
+        path: releaseWebAdmin.zip
+
+    # Generate Tagname
+    - name: Generate Tagname for release
+      id: taggerDryRun
+      uses: anothrNick/github-tag-action@1.61.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DRY_RUN: true
+        DEFAULT_BUMP: patch
+        RELEASE_BRANCHES : stage,main
+        BRANCH_HISTORY: last
+
+    # Create release
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: ${{ steps.taggerDryRun.outputs.new_tag }}
+        release_name: Release ${{ steps.taggerDryRun.outputs.new_tag }}
+        #body_path: ./body.md
+        body: ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false
+
+    # Upload Assets to release
+    - name: Upload Release Asset WebAdmin
+      id: upload-webadmin-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./releaseWebAdmin.zip
+        asset_name: releaseWebAdmin.zip
+        asset_content_type: application/zip
+
+# ------- END RELEASE PROCCESS -------- #
+      
