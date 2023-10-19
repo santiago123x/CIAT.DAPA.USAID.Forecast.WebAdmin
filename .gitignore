@@ -1,0 +1,33 @@
+# Visual Studio files
+.vscode/
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Aa][Ww][Xx]/
+[Bb][Ii][Nn]/
+[Oo][Bb][Jj]/
+[Ll][Oo][Gg]s/
+[Ll][Ii][Bb]/
+[Nn][Dd][Ee][Bb][Uu][Gg]/
+[Pp][Uu][Bb][Ll][Ii][Ss][Hh]/
+
+# Visual Studio 2019 config folder
+.vs2019/
+
+# Rider
+.idea/
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates

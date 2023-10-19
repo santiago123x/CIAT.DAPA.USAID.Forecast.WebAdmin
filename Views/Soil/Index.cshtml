@@ -1,0 +1,78 @@
+﻿@using CIAT.DAPA.USAID.Forecast.Data.Models
+@using System.Linq
+@model IEnumerable<CIAT.DAPA.USAID.Forecast.Data.Models.Soil>
+@{
+    ViewBag.Title = Localizer["Title"];
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<h2>@ViewBag.Title</h2>
+
+<p>
+    @Html.ActionLink(Localizer["New"].Value, "Create")
+</p>
+
+<div style="display: flex;justify-content: start;gap: 8%;margin-bottom: 1%;">
+    @{
+        var countriesData = (SelectList)ViewData["countriesData"];
+        var countryList = countriesData.ToList();
+        string countrySelected = ViewBag.countrySelected;
+    }
+    @if (ViewBag.countrySelected != "")
+    {
+        @Html.Hidden("countrySelected", countrySelected)
+    }
+    @if (countryList.Count > 2)
+    {
+        <div class="col-md-4" style="display: flex;align-items: center;">
+            @Html.Label("countrySelect", @Localizer["Filter"].Value, htmlAttributes: new { @class = "control-label col-md-2" })
+            @using (Html.BeginForm("Index", "Soil", FormMethod.Get, htmlAttributes: new
+            {
+                @id = "selectForm",
+                @style = "display: flex;align-items: center;gap: 2%;width: 80%;"
+            }))
+            {
+                @Html.DropDownList("countrySelect", selectList: (SelectList)ViewData["countriesData"], optionLabel: null, htmlAttributes: new { @class = "form-control", onchange = "submitForm()" })
+            }
+        </div>
+    }
+    <input type="text" id="txt_search" class="form-control" onkeyup="search_text()" placeholder="@Localizer["Search"]" />
+</div>
+<table class="table" id="index_list">
+    <tr>
+        <th>
+            @Localizer["Crop"]
+        </th>
+        <th>
+            @Localizer["ID"]
+        </th>
+        <th>
+            @Localizer["Name"]
+        </th>
+        <th></th>
+    </tr>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                @{ var c = ((List<Crop>)ViewBag.crops).FirstOrDefault(p => p.id == item.crop); }
+                @c.name
+            </td>
+            <td>
+                @item.id.ToString()
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.name)
+            </td>
+            <td>
+                @Html.ActionLink(Localizer["Edit"].Value, "Edit", new { id = item.id }) |
+                @Html.ActionLink(Localizer["Details"].Value, "Details", new { id = item.id }) |
+                @Html.ActionLink(Localizer["Delete"].Value, "Delete", new { id = item.id }) |
+                @Html.ActionLink(Localizer["Threshold"].Value, "Threshold", new { id = item.id })
+            </td>
+        </tr>
+    }
+</table>
+
+@section Scripts {
+    @await Html.PartialAsync("_ManagementScriptsPartial")
+}

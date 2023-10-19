@@ -1,0 +1,99 @@
+﻿@using CIAT.DAPA.USAID.Forecast.Data.Models
+@using System.Linq
+@model IEnumerable<CIAT.DAPA.USAID.Forecast.Data.Models.Recommendation>
+@{
+    ViewBag.Title = Localizer["Title"];
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<h2>@ViewBag.Title</h2>
+
+<p>
+    @Html.ActionLink(Localizer["New"].Value, "Create")
+</p>
+
+<div style="display: flex;justify-content: start;gap: 8%;margin-bottom: 1%;">
+    @{
+        var countriesData = (SelectList)ViewData["countriesData"];
+        var countryList = countriesData.ToList();
+        string countrySelected = ViewBag.countrySelected;
+    }
+    @if (ViewBag.countrySelected != "")
+    {
+        @Html.Hidden("countrySelected", countrySelected)
+    }
+    @if (countryList.Count > 2)
+    {
+        <div class="col-md-4" style="display: flex;align-items: center;">
+            @Html.Label("countrySelect", @Localizer["Filter"].Value, htmlAttributes: new { @class = "control-label col-md-2" })
+            @using (Html.BeginForm("Index", "Recommendation", FormMethod.Get, htmlAttributes: new
+            {
+                @id = "selectForm",
+                @style = "display: flex;align-items: center;gap: 2%;width: 80%;"
+            }))
+            {
+                @Html.DropDownList("countrySelect", selectList: (SelectList)ViewData["countriesData"], optionLabel: null, htmlAttributes: new { @class = "form-control", onchange = "submitForm()" })
+            }
+        </div>
+    }
+    <input type="text" id="txt_search" class="form-control" onkeyup="search_text()" placeholder="@Localizer["Search"]" />
+</div>
+<table class="table" id="index_list">
+    <tr>
+        <th>
+            @Localizer["Country"]
+        </th>
+        <th>
+            @Localizer["Id"]
+        </th>
+        <th>
+            @Localizer["Enum"]
+        </th>
+        <th>
+            @Localizer["Type"]
+        </th>
+        <th>
+            @Localizer["Lang"]
+        </th>
+        <th>
+            @Localizer["Response"]
+        </th>
+        <th></th>
+    </tr>
+    @foreach (Recommendation item in Model)
+    {
+<tr>
+    <td>
+        @{ Country cty = ((List<Country>)ViewBag.countries).FirstOrDefault(p => p.id == item.country); }
+        @cty.name
+    </td>
+    <td>
+        @item.id
+    </td>
+    <td>
+        @{ string enm = ((List<string>)ViewBag.enums).FirstOrDefault(p => p == item.type_enum); }
+        @enm
+    </td>
+    <td>
+        @{ var t_reps = ((List<string>)ViewBag.type_resp).FirstOrDefault(p => p == item.type_resp); }
+        @t_reps
+    </td>
+    <td>
+        @{ var langs = ((List<string>)ViewBag.langs).FirstOrDefault(p => p == item.lang); }
+        @langs
+    </td>
+    <td>
+        @{ string resp = (item.resp.Length > 15 ? item.resp.Substring(0, 15) : item.resp); }
+        @resp
+    </td>
+    <td>
+        @Html.ActionLink(Localizer["Edit"].Value, "Edit", new { id = item.id }) |
+        @Html.ActionLink(Localizer["Details"].Value, "Details", new { id = item.id })
+    </td>
+</tr>
+    }
+</table>
+
+
+@section Scripts {
+    @await Html.PartialAsync("_ManagementScriptsPartial")
+}
